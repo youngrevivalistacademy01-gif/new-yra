@@ -1,146 +1,453 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>YRA | Foundational Cohort Schedule</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link rel="stylesheet" href="styles.css">
-</head>
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Play, Download, RotateCcw, Save, Trash2, Terminal, Eye, Code2 } from 'lucide-react';
+
+const DEFAULT_FILES = {
+  html: `<h1>Hello, world</h1>\n<p>Edit any tab and press Run.</p>\n<button id="btn">Click me</button>`,
+  css: `body {\n  font-family: sans-serif;\n  padding: 24px;\n  color: #1a1a1a;\n}\n\nbutton {\n  padding: 8px 16px;\n  cursor: pointer;\n}`,
+  js: `document.getElementById('btn').addEventListener('click', () => {\n  console.log('Button was clicked');\n});`,
+};
+
+const TABS = [
+  { key: 'html', label: 'index.html', color: '#e37933' },
+  { key: 'css', label: 'style.css', color: '#4c8bf5' },
+  { key: 'js', label: 'script.js', color: '#e8c85a' },
+];
+
+const STORAGE_KEY = 'code-scratchpad-draft';
+
+function buildPreviewDoc(files) {
+  const consoleBridge = `
+    <script>
+      (function () {
+        const send = (level, args) => {
+          try {
+            window.parent.postMessage({
+              source: 'scratchpad-console',
+              level,
+              text: args.map(a => {
+                try { return typeof a === 'string' ? a : JSON.stringify(a); }
+                catch (e) { return String(a); }
+              }).join(' ')
+            }, '*');
+          } catch (e) {}
+        };
+        ['log', 'warn', 'error', 'info'].forEach(level => {
+          const original = console[level];
+          console[level] = function (...args) {
+            send(level, args);
+            original.apply(console, args);
+          };
+        });
+        window.onerror = function (message, source, lineno) {
+          send('error', ['Error: ' + message + ' (line ' + lineno + ')']);
+        };
+      })();
+    <\/script>
+  `;
+
+  return `<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><style>${files.css}</style></head>
 <body>
-
-    <div class="glass-bg-glow glow-1" aria-hidden="true"></div>
-    <div class="glass-bg-glow glow-2" aria-hidden="true"></div>
-
-    <div class="app-container">
-
-        <header class="app-header" id="appHeader">
-            <a href="classes.html" class="back-control" aria-label="Back to classes">
-                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
-            </a>
-            <div class="app-brand">YRA</div>
-            <div class="status-indicator">
-                <span class="dot-online" aria-hidden="true"></span> ONLINE
-            </div>
-            <div class="header-progress" aria-hidden="true">
-                <span class="header-progress-fill" id="scrollProgress"></span>
-            </div>
-        </header>
-
-        <section class="cohort-hero">
-            <h1>Foundational<br>Cohort</h1>
-            <div class="pill-badge">STAGE 01</div>
-            <p class="cohort-aim">
-                Establishing students in the core pillars of faith, divine structures, and complete spiritual alignment.
-            </p>
-        </section>
-
-        <section class="modules-timeline">
-
-            <article class="glass-module-card">
-                <div class="card-header-row">
-                    <span class="mod-number">MODULE 1</span>
-                    <span class="topic-tag">Salvation</span>
-                </div>
-                <h2 class="mod-title">The Finished Work of Christ and the Reality of Salvation</h2>
-
-                <div class="outcome-box">
-                    <h3>OUTCOME</h3>
-                    <p>Students understand what Christ accomplished and become established in salvation.</p>
-                </div>
-
-                <button type="button" class="focus-toggle" aria-expanded="false" aria-controls="focus-1">
-                    <span>Focus Areas</span>
-                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </button>
-                <div class="focus-box" id="focus-1">
-                    <ul>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Sin and man's separation from God</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> The Cross and Redemption</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Grace and Faith</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> New Birth</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Assurance of Salvation</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Understanding the Gospel</li>
-                    </ul>
-                </div>
-
-                <a href="Foundational1.html" class="action-pill">
-                    <span>ENTER</span>
-                    <i class="fa-solid fa-arrow-right-long" aria-hidden="true"></i>
-                </a>
-            </article>
-
-            <article class="glass-module-card">
-                <div class="card-header-row">
-                    <span class="mod-number">MODULE 2</span>
-                    <span class="topic-tag">Discipleship</span>
-                </div>
-                <h2 class="mod-title">The Ministry of the Holy Spirit and the Tools of Discipleship</h2>
-
-                <div class="outcome-box">
-                    <h3>OUTCOME</h3>
-                    <p>Students understand the divine systems God uses to produce growth and maturity.</p>
-                </div>
-
-                <button type="button" class="focus-toggle" aria-expanded="false" aria-controls="focus-2">
-                    <span>Focus Areas</span>
-                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </button>
-                <div class="focus-box" id="focus-2">
-                    <ul>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Person and ministry of the Holy Spirit</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> The Word of God</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Mentors and Spiritual Examples</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Spiritual Family and Community</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Service Platforms</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> How transformation happens</li>
-                    </ul>
-                </div>
-
-                <a href="Foundational2.html" class="action-pill">
-                    <span>ENTER</span>
-                    <i class="fa-solid fa-arrow-right-long" aria-hidden="true"></i>
-                </a>
-            </article>
-
-            <article class="glass-module-card">
-                <div class="card-header-row">
-                    <span class="mod-number">MODULE 3</span>
-                    <span class="topic-tag">Alignment</span>
-                </div>
-                <h2 class="mod-title">Surrender, Alignment and Obedience</h2>
-
-                <div class="outcome-box">
-                    <h3>OUTCOME</h3>
-                    <p>Students move from merely believing in Jesus to following Jesus.</p>
-                </div>
-
-                <button type="button" class="focus-toggle" aria-expanded="false" aria-controls="focus-3">
-                    <span>Focus Areas</span>
-                    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-                </button>
-                <div class="focus-box" id="focus-3">
-                    <ul>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Lordship of Christ</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Yieldedness to God</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Cost of discipleship</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Obedience as proof of love</li>
-                        <li><i class="fa-solid fa-circle-dot" aria-hidden="true"></i> Consecration and spiritual formation</li>
-                    </ul>
-                </div>
-
-                <a href="Foundational3.html" class="action-pill">
-                    <span>ENTER</span>
-                    <i class="fa-solid fa-arrow-right-long" aria-hidden="true"></i>
-                </a>
-            </article>
-
-        </section>
-    </div>
-
-    <script src="script.js"></script>
+${files.html}
+${consoleBridge}
+<script>
+try {
+${files.js}
+} catch (err) {
+  console.error(err.message);
+}
+<\/script>
 </body>
-</html>
+</html>`;
+}
+
+export default function CodeScratchpad() {
+  const [files, setFiles] = useState(DEFAULT_FILES);
+  const [activeTab, setActiveTab] = useState('html');
+  const [previewDoc, setPreviewDoc] = useState('');
+  const [consoleLines, setConsoleLines] = useState([]);
+  const [saveStatus, setSaveStatus] = useState('idle'); // idle | saving | saved | error
+  const [mobileView, setMobileView] = useState('editor'); // editor | preview
+  const [loaded, setLoaded] = useState(false);
+
+  const textareaRef = useRef(null);
+  const saveTimeout = useRef(null);
+  const runTimeout = useRef(null);
+
+  // Load any previously saved draft on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const result = await window.storage.get(STORAGE_KEY);
+        if (result && result.value) {
+          const parsed = JSON.parse(result.value);
+          if (parsed && parsed.html !== undefined) setFiles(parsed);
+        }
+      } catch (e) {
+        // no draft saved yet — start fresh
+      } finally {
+        setLoaded(true);
+      }
+    })();
+  }, []);
+
+  // Run automatically after load, and whenever files change (debounced)
+  useEffect(() => {
+    if (!loaded) return;
+    clearTimeout(runTimeout.current);
+    runTimeout.current = setTimeout(() => runCode(), 600);
+    return () => clearTimeout(runTimeout.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, loaded]);
+
+  // Autosave (debounced) whenever files change, after initial load
+  useEffect(() => {
+    if (!loaded) return;
+    setSaveStatus('saving');
+    clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        const result = await window.storage.set(STORAGE_KEY, JSON.stringify(files));
+        setSaveStatus(result ? 'saved' : 'error');
+      } catch (e) {
+        setSaveStatus('error');
+      }
+    }, 500);
+    return () => clearTimeout(saveTimeout.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [files, loaded]);
+
+  // Listen for console messages forwarded from the preview iframe
+  useEffect(() => {
+    function handleMessage(e) {
+      if (e.data && e.data.source === 'scratchpad-console') {
+        setConsoleLines(prev => [...prev.slice(-49), { level: e.data.level, text: e.data.text, id: Date.now() + Math.random() }]);
+      }
+    }
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  const runCode = useCallback(() => {
+    setConsoleLines([]);
+    setFiles(current => {
+      setPreviewDoc(buildPreviewDoc(current));
+      return current;
+    });
+  }, []);
+
+  function updateFile(value) {
+    setFiles(prev => ({ ...prev, [activeTab]: value }));
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const el = textareaRef.current;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const value = files[activeTab];
+      const next = value.slice(0, start) + '  ' + value.slice(end);
+      updateFile(next);
+      requestAnimationFrame(() => {
+        el.selectionStart = el.selectionEnd = start + 2;
+      });
+    }
+  }
+
+  function resetProject() {
+    if (!window.confirm('Reset all three files back to the starter code? This clears your saved draft.')) return;
+    setFiles(DEFAULT_FILES);
+    setConsoleLines([]);
+  }
+
+  function downloadFile(key) {
+    const names = { html: 'index.html', css: 'style.css', js: 'script.js' };
+    const blob = new Blob([files[key]], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = names[key];
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadBundle() {
+    const bundled = buildPreviewDoc(files).replace(/<script>\s*\(function \(\) \{[\s\S]*?\}\)\(\);\s*<\/script>\n/, '');
+    const blob = new Blob([bundled], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'page.html';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const activeMeta = TABS.find(t => t.key === activeTab);
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#14161c',
+      color: '#e5e7ee',
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+
+      {/* top bar */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '10px 16px',
+        borderBottom: '1px solid #262a34',
+        background: '#191c24',
+        flexWrap: 'wrap',
+        gap: 10,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Code2 size={18} color="#5dd6c0" />
+          <span style={{ fontWeight: 600, fontSize: 14 }}>Code Scratchpad</span>
+          <span style={{
+            fontSize: 11,
+            color: saveStatus === 'error' ? '#e8746a' : '#8b909c',
+            marginLeft: 4,
+            minWidth: 70,
+          }}>
+            {saveStatus === 'saving' && 'Saving…'}
+            {saveStatus === 'saved' && 'Draft saved'}
+            {saveStatus === 'error' && 'Save failed'}
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={runCode} style={btnStyle('#5dd6c0', '#0c1613')}>
+            <Play size={13} /> Run
+          </button>
+          <button onClick={downloadBundle} style={btnStyle('#2a2e38', '#e5e7ee')}>
+            <Download size={13} /> Download page
+          </button>
+          <button onClick={resetProject} style={btnStyle('#2a2e38', '#e8746a')}>
+            <RotateCcw size={13} /> Reset
+          </button>
+        </div>
+      </div>
+
+      {/* mobile view switch */}
+      <div style={{ display: 'none' }} className="scratchpad-mobile-tabs">
+        <button onClick={() => setMobileView('editor')}>Editor</button>
+        <button onClick={() => setMobileView('preview')}>Preview</button>
+      </div>
+      <div style={{
+        display: 'flex',
+        gap: 6,
+        padding: '8px 12px',
+        borderBottom: '1px solid #262a34',
+      }} className="mobile-only-tabs">
+        <button
+          onClick={() => setMobileView('editor')}
+          style={mobileTabStyle(mobileView === 'editor')}
+        >
+          <Code2 size={13} /> Editor
+        </button>
+        <button
+          onClick={() => setMobileView('preview')}
+          style={mobileTabStyle(mobileView === 'preview')}
+        >
+          <Eye size={13} /> Preview
+        </button>
+      </div>
+
+      {/* main split */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }} className="scratchpad-split">
+
+        {/* editor pane */}
+        <div
+          className="scratchpad-pane"
+          style={{
+            flex: 1,
+            display: mobileView === 'editor' ? 'flex' : undefined,
+            flexDirection: 'column',
+            borderRight: '1px solid #262a34',
+            minWidth: 0,
+          }}
+        >
+          <div style={{ display: 'flex', borderBottom: '1px solid #262a34', background: '#191c24' }}>
+            {TABS.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '10px 16px',
+                  background: activeTab === tab.key ? '#14161c' : 'transparent',
+                  border: 'none',
+                  borderBottom: activeTab === tab.key ? `2px solid ${tab.color}` : '2px solid transparent',
+                  color: activeTab === tab.key ? '#e5e7ee' : '#8b909c',
+                  fontSize: 12.5,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+                  cursor: 'pointer',
+                }}
+              >
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: tab.color }} />
+                {tab.label}
+              </button>
+            ))}
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingRight: 10 }}>
+              <button
+                onClick={() => downloadFile(activeTab)}
+                title={`Download ${activeMeta.label}`}
+                style={{ background: 'none', border: 'none', color: '#8b909c', cursor: 'pointer', padding: 6 }}
+              >
+                <Save size={14} />
+              </button>
+            </div>
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            value={files[activeTab]}
+            onChange={e => updateFile(e.target.value)}
+            onKeyDown={handleKeyDown}
+            spellCheck={false}
+            style={{
+              flex: 1,
+              width: '100%',
+              resize: 'none',
+              border: 'none',
+              outline: 'none',
+              background: '#14161c',
+              color: '#e5e7ee',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+              fontSize: 13.5,
+              lineHeight: 1.6,
+              padding: '16px 18px',
+              tabSize: 2,
+              minHeight: 300,
+            }}
+          />
+        </div>
+
+        {/* preview pane */}
+        <div
+          className="scratchpad-pane"
+          style={{
+            flex: 1,
+            display: mobileView === 'preview' ? 'flex' : undefined,
+            flexDirection: 'column',
+            minWidth: 0,
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '9px 16px',
+            borderBottom: '1px solid #262a34',
+            background: '#191c24',
+            fontSize: 12,
+            color: '#8b909c',
+          }}>
+            <Eye size={13} /> Preview
+          </div>
+          <iframe
+            title="preview"
+            srcDoc={previewDoc}
+            sandbox="allow-scripts"
+            style={{ flex: 1, border: 'none', background: '#ffffff', minHeight: 240 }}
+          />
+          <div style={{
+            borderTop: '1px solid #262a34',
+            background: '#101216',
+            maxHeight: 140,
+            overflowY: 'auto',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            fontSize: 12,
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 14px',
+              color: '#8b909c',
+              borderBottom: consoleLines.length ? '1px solid #262a34' : 'none',
+              position: 'sticky',
+              top: 0,
+              background: '#101216',
+            }}>
+              <Terminal size={12} /> Console
+              {consoleLines.length > 0 && (
+                <button
+                  onClick={() => setConsoleLines([])}
+                  style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#8b909c', cursor: 'pointer' }}
+                  title="Clear console"
+                >
+                  <Trash2 size={12} />
+                </button>
+              )}
+            </div>
+            {consoleLines.length === 0 ? (
+              <p style={{ padding: '10px 14px', color: '#565a66' }}>Output from console.log and runtime errors shows up here.</p>
+            ) : (
+              consoleLines.map(line => (
+                <div key={line.id} style={{
+                  padding: '5px 14px',
+                  color: line.level === 'error' ? '#e8746a' : line.level === 'warn' ? '#e8c85a' : '#c8ccd6',
+                  whiteSpace: 'pre-wrap',
+                  wordBreak: 'break-word',
+                }}>
+                  {line.text}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      <style>{`
+        .mobile-only-tabs { display: none; }
+        @media (max-width: 760px) {
+          .mobile-only-tabs { display: flex !important; }
+          .scratchpad-split { flex-direction: column; }
+          .scratchpad-pane { display: none !important; }
+          .scratchpad-pane[style*="display: flex"] { display: flex !important; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function btnStyle(bg, fg) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 12px',
+    background: bg,
+    color: fg,
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 12.5,
+    fontWeight: 600,
+    cursor: 'pointer',
+  };
+}
+
+function mobileTabStyle(active) {
+  return {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '6px 12px',
+    background: active ? '#2a2e38' : 'transparent',
+    color: active ? '#e5e7ee' : '#8b909c',
+    border: 'none',
+    borderRadius: 6,
+    fontSize: 12.5,
+    cursor: 'pointer',
+  };
+}
